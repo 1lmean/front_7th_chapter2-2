@@ -21,13 +21,9 @@ export function createElement(vNode) {
   }
 
   if (typeof vNode === "object" && vNode !== null) {
-    console.log(vNode, vNode.type);
-    if (vNode.type === "function") {
-      return {
-        type: vNode.type,
-        props: vNode.props,
-        children: vNode.children.map(createElement),
-      };
+    // 함수 컴포넌트는 정규화 후에만 createElement 호출되므로 여기서는 처리하지 않음
+    if (typeof vNode.type === "function") {
+      throw new Error("함수 컴포넌트는 정규화 후에 createElement를 호출해야 합니다.");
     }
 
     // DOM 요소 생성
@@ -65,9 +61,23 @@ function updateAttributes($el, props) {
   Object.keys(props).forEach((key) => {
     if (key === "children") return; // children는 별도 처리
 
+    // 이벤트 핸들러 처리 (onClick, onMouseOver 등)
+    if (key.startsWith("on") && typeof props[key] === "function") {
+      const eventType = key.slice(2).toLowerCase(); // onClick -> click
+      addEvent($el, eventType, props[key]);
+      return;
+    }
+
     // className을 class로 변환
     if (key === "className") {
       $el.setAttribute("class", props[key]);
+    } else if (typeof props[key] === "boolean") {
+      // 불리언 속성 처리
+      if (props[key]) {
+        $el.setAttribute(key, "");
+      } else {
+        $el.removeAttribute(key);
+      }
     } else {
       $el.setAttribute(key, props[key]);
     }
